@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lab {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  website     String?
+  description String?
+  country     String?
+  foundedYear Int?
+  models      Model[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Provider {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  slug           String          @unique
+  website        String?
+  description    String?
+  modelProviders ModelProvider[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Model {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  labId           String
+  lab             Lab              @relation(fields: [labId], references: [id], onDelete: Cascade)
+  description     String
+  modelType       String
+  contextWindow   Int
+  maxOutputTokens Int?
+  releaseDate     DateTime
+  isOpenSource    Boolean          @default(false)
+  modalities      String[]
+  capabilities    String[]
+  providers       ModelProvider[]
+  benchmarks      ModelBenchmark[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([labId])
+  @@index([modelType])
+  @@index([contextWindow])
+  @@index([releaseDate])
+}
+
+model ModelProvider {
+  id               String   @id @default(cuid())
+  modelId          String
+  providerId       String
+  model            Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  provider         Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  inputPricePer1M  Float
+  outputPricePer1M Float
+  latencyMs        Int?
+  throughputTps    Int?
+  isAvailable      Boolean  @default(true)
+
+  @@unique([modelId, providerId])
+  @@index([inputPricePer1M])
+}
+
+model Benchmark {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  slug        String           @unique
+  category    String
+  description String?
+  maxScore    Float            @default(100)
+  scores      ModelBenchmark[]
+}
+
+model ModelBenchmark {
+  id          String    @id @default(cuid())
+  modelId     String
+  benchmarkId String
+  model       Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  benchmark   Benchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+  score       Float
+
+  @@unique([modelId, benchmarkId])
+  @@index([benchmarkId, score])
+}
